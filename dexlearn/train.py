@@ -32,12 +32,20 @@ def main(config: DictConfig) -> None:
     # load ckpt if exists
     if config.ckpt is not None:
         ckpt = torch.load(config.ckpt, map_location="cpu")
+        if config.data.get("hand_model_id") is not None:
+            if ckpt.get("hand_model_id") != config.data.hand_model_id:
+                raise ValueError("Checkpoint hand identity does not match Sharpa data")
+            if list(ckpt.get("joint_names", [])) != list(config.data.joint_names):
+                raise ValueError("Checkpoint joint order does not match Sharpa data")
         model.load_state_dict(ckpt["model"])
         model.to(config.device)
         optimizer.load_state_dict(ckpt["optimizer"])
         cur_iter = ckpt["iter"]
-        for _ in range(cur_iter):
-            scheduler.step()
+        if "scheduler" in ckpt:
+            scheduler.load_state_dict(ckpt["scheduler"])
+        else:
+            for _ in range(cur_iter):
+                scheduler.step()
         print(f"loaded ckpt from {config.ckpt}")
     else:
         cur_iter = 0
@@ -89,6 +97,7 @@ def main(config: DictConfig) -> None:
                 dict(
                     model=model.state_dict(),
                     optimizer=optimizer.state_dict(),
+                    scheduler=scheduler.state_dict(),
                     iter=it + 1,
                 ),
                 it + 1,

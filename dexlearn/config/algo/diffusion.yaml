@@ -19,6 +19,8 @@ model:
     voxel_size: 0.005
   grasp_type_emb:
     name: LearnableTypeCond
+    in_feat_dim: ${..backbone.out_feat_dim}
+    use_predictor: false
     out_feat_dim: 128
     disabled: False
   head:

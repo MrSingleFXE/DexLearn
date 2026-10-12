@@ -1,4 +1,5 @@
 import wandb
+import json
 from os.path import join as pjoin
 import torch
 import os
@@ -9,6 +10,10 @@ import numpy as np
 class Logger:
     def __init__(self, cfg):
         self.config = cfg.wandb
+        self.hand_identity = None
+        if cfg.data.get("hand_model_id") is not None:
+            self.hand_identity = dict(hand_model_id=cfg.data.hand_model_id,
+                                      joint_names=list(cfg.data.joint_names))
         self.save_ckpt_dir = pjoin(cfg.output_folder, self.config.id, "ckpts")
         os.makedirs(self.save_ckpt_dir, exist_ok=True)
         self.save_test_dir = pjoin(cfg.output_folder, self.config.id, "tests")
@@ -39,12 +44,17 @@ class Logger:
         mode is used to distinguish train, val, ...
         step is the iteration number
         """
-        wandb.log({f"{mode}/{k}": v for k, v in dic.items()}, step=step)
+        values = {k: float(v) for k, v in dic.items()}
+        with open(pjoin(os.path.dirname(self.save_ckpt_dir), "metrics.jsonl"), "a") as f:
+            f.write(json.dumps(dict(step=step + 1, mode=mode, **values), allow_nan=False) + "\n")
+        wandb.log({f"{mode}/{k}": v for k, v in values.items()}, step=step)
 
     def save(self, dic: dict, step: int):
         """
         save a dictionary to a file
         """
+        if self.hand_identity is not None:
+            dic = dict(dic, **self.hand_identity)
         torch.save(dic, pjoin(self.save_ckpt_dir, f"step_{str(step).zfill(6)}.pth"))
 
     def save_samples(self, dic: dict, step: int, save_path: list):
@@ -57,7 +67,7 @@ class Logger:
                     break
 
             for j in range(dic[torch_key].shape[1]):
-                save_dict = {}
+                save_dict = dict(self.hand_identity or {})
                 for k, v in dic.items():
                     if type(v).__module__ == "torch":
                         save_dict[k] = v[i, j].detach().cpu().numpy()

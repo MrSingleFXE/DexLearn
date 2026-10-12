@@ -1,0 +1,8 @@
+defaults:
+  - bodex_shadow
+  - _self_
+
+num_workers: 8
+split_path: valid_split
+test_split: test
+test_scene_cfg: tabletop_ur10e/*.npy

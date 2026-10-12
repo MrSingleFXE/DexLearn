@@ -25,6 +25,11 @@ def main_func(config: DictConfig) -> None:
     # load ckpt if exists
     if config.ckpt is not None:
         ckpt = torch.load(config.ckpt, map_location="cpu")
+        if config.data.get("hand_model_id") is not None:
+            if ckpt.get("hand_model_id") != config.data.hand_model_id:
+                raise ValueError("Checkpoint hand identity does not match Sharpa data")
+            if list(ckpt.get("joint_names", [])) != list(config.data.joint_names):
+                raise ValueError("Checkpoint joint order does not match Sharpa data")
         model.load_state_dict(ckpt["model"])
         ckpt_iter = ckpt["iter"]
         print("loaded ckpt from", config.ckpt)

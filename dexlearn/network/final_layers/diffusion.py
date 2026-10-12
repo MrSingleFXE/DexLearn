@@ -144,7 +144,7 @@ class DiffusionRT_MLPRTJ(torch.nn.Module):
         result_dict["loss_joint"] = loss_others[:, pose_num * 12 :].mean()
         with torch.no_grad():
             result_dict["abs_dis_joint"] = (
-                (out_info - gt_info)[pose_num * 12 :].abs().mean()
+                (out_info - gt_info)[..., pose_num * 12 :].abs().mean()
             )
 
         return result_dict
